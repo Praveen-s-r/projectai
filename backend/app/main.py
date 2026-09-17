@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR.parent / "frontend"
 
 app.mount(
     "/audio",
@@ -26,6 +27,8 @@ app.mount(
 
 app.include_router(tts_router)
 
-@app.get("/")
-def home():
-    return {"message": "ProjectAI Backend Running"}
+app.mount(
+    "/",
+    StaticFiles(directory=FRONTEND_DIR, html=True),
+    name="frontend",
+)

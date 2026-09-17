@@ -20,5 +20,5 @@ def tts(request: SpeechRequest):
     )
 
     return {
-        "audio_url": f"http://127.0.0.1:8000/audio/{filename}"
+        "audio_url": f"/audio/{filename}"
     }
