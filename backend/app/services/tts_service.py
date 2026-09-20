@@ -1,3 +1,4 @@
+import gc
 import uuid
 from pathlib import Path
 
@@ -8,12 +9,25 @@ from transformers import VitsModel, AutoTokenizer, set_seed
 
 MODEL_NAME = "facebook/mms-tts-kan"
 
+# Keep CPU memory usage lower
+torch.set_num_threads(1)
+
 print("Loading Kannada MMS TTS model...")
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 model = VitsModel.from_pretrained(MODEL_NAME)
 
+# The posterior encoder is not required for text-to-speech inference
+del model.posterior_encoder
+gc.collect()
+
+# BF16 significantly reduces memory usage while working on CPU
+model = model.to(dtype=torch.bfloat16)
+
+gc.collect()
+
 print("Kannada MMS TTS model loaded successfully!")
+print("Using BF16 low-memory inference.")
 
 
 # backend/app/generated/audio
@@ -28,7 +42,6 @@ def generate_speech(
     voice: str,
     speed: float
 ):
-    # Voice is kept for compatibility with the existing API.
     # MMS Kannada currently uses this single Kannada checkpoint.
     if voice not in ["kannada", "kn"]:
         raise ValueError("Only Kannada voice is currently available.")
@@ -49,16 +62,16 @@ def generate_speech(
     set_seed(555)
 
     # Generate speech
-    with torch.no_grad():
+    with torch.inference_mode():
         output = model(**inputs).waveform
 
-    waveform = output[0].cpu().numpy()
+    # Convert BF16 output to float32 before saving as WAV
+    waveform = output[0].float().cpu().numpy()
 
     # Create unique filename
     filename = f"{uuid.uuid4()}.wav"
     output_path = AUDIO_DIR / filename
 
-    # Save WAV
     scipy.io.wavfile.write(
         str(output_path),
         rate=model.config.sampling_rate,
