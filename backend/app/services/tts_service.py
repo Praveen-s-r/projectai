@@ -15,7 +15,10 @@ torch.set_num_threads(1)
 print("Loading Kannada MMS TTS model...")
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = VitsModel.from_pretrained(MODEL_NAME)
+model = VitsModel.from_pretrained(
+    MODEL_NAME,
+    torch_dtype=torch.bfloat16
+)
 
 # The posterior encoder is not required for text-to-speech inference
 del model.posterior_encoder
